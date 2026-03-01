@@ -41,10 +41,7 @@
         .status-moving { background: #dcfce7; color: #166534; }
         .status-idle { background: #fee2e2; color: #991b1b; }
 
-        #alert-box {
-            position: fixed; top: 20px; right: 20px; z-index: 3000;
-            pointer-events: none;
-        }
+        #alert-box { position: fixed; top: 20px; right: 20px; z-index: 3000; pointer-events: none; }
         .toast {
             background: #1e293b; color: white; padding: 12px 20px; border-radius: 12px;
             margin-bottom: 8px; font-size: 12px; font-weight: bold; border-left: 4px solid #3b82f6;
@@ -72,7 +69,7 @@
             <h2 id="driver-display-name" class="text-2xl font-black text-slate-800 uppercase mb-8 italic"></h2>
             <button onclick="toggleGPS()" id="btn-gps" class="w-full bg-emerald-500 text-white py-12 rounded-[2.5rem] font-black text-3xl shadow-2xl transition-all active:scale-95">TESTAR</button>
         </div>
-        <button onclick="location.reload()" class="mt-8 text-slate-400 font-bold text-xs uppercase tracking-widest">SAIR</button>
+        <button onclick="location.reload()" class="mt-8 text-slate-400 font-bold text-xs uppercase tracking-widest">RE#$7990</button>
     </div>
 
     <div id="admin-section" class="hidden flex h-screen w-screen overflow-hidden">
@@ -89,19 +86,19 @@
 
             <div class="space-y-4 flex-1">
                 <div>
-                    <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Monitoramento</h3>
+                    <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Entregadores Ativos</h3>
                     <div id="driver-list" class="space-y-3"></div>
                 </div>
 
                 <div id="stats-panel" class="pt-4 border-t border-slate-100 hidden">
-                    <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Indicadores (Hoje)</h3>
+                    <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Indicadores</h3>
                     <div id="stats-content" class="text-[10px] font-bold text-slate-600 space-y-2"></div>
                 </div>
             </div>
 
             <div class="pt-6 border-t border-slate-200">
-                <button onclick="clearHistoryByDate()" class="w-full bg-red-50 text-red-600 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-red-100 transition-all mb-3">Limpar Data Selecionada</button>
-                <button onclick="location.reload()" class="w-full bg-slate-100 text-slate-500 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-200 transition-all">Sair do Sistema</button>
+                <button onclick="clearHistoryByDate()" class="w-full bg-red-50 text-red-600 py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-red-100 transition-all mb-3">Limpar Histórico</button>
+                <button onclick="location.reload()" class="w-full bg-slate-100 text-slate-500 py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-200 transition-all">Sair do Sistema</button>
             </div>
         </div>
 
@@ -112,7 +109,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getDatabase, ref, set, onValue, push, update, remove, query, orderByChild, equalTo, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+        import { getDatabase, ref, set, onValue, push, update, remove, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDFQCMsX04fwh7MVyEpvXnXD0U4TD5Or5w",
@@ -127,13 +124,12 @@
         const db = getDatabase(app);
         let myName = "", watchId = null, map, markers = {}, polylines = {}, activeFilters = {};
         let mapStyles = [
-            'http://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}',
+            'http://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
             'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
         ];
         let currentStyleIndex = 0;
         let baseLayer;
 
-        // Inicia com a data de hoje
         document.getElementById('filter-date').valueAsDate = new Date();
 
         window.startApp = () => {
@@ -166,19 +162,18 @@
                     };
                     set(ref(db, 'entregadores/' + myName), { ...coords, online: true });
                     push(ref(db, 'historico/' + myName), coords);
-                    btn.innerText = "LIGADO";
-                    btn.classList.replace('bg-emerald-500', 'bg-blue-600');
+                    btn.innerText = ".";
                 }, (err) => alert("Erro GPS: " + err.message), { enableHighAccuracy: true });
             } else {
                 update(ref(db, 'entregadores/' + myName), { online: false });
                 navigator.geolocation.clearWatch(watchId); watchId = null;
-                btn.innerText = "TESTAR";
-                btn.classList.replace('bg-blue-600', 'bg-emerald-500');
+                btn.innerText = "Ligar";
             }
         };
 
         function initMap() {
-            map = L.map('map', { zoomControl: false }).setView([0,0], 2);
+            if (map) return;
+            map = L.map('map', { zoomControl: false }).setView([-23.5505, -46.6333], 12);
             baseLayer = L.tileLayer(mapStyles[currentStyleIndex], {
                 maxZoom: 20, subdomains:['mt0','mt1','mt2','mt3']
             }).addTo(map);
@@ -186,7 +181,7 @@
 
         window.toggleMapStyle = () => {
             currentStyleIndex = (currentStyleIndex + 1) % mapStyles.length;
-            map.removeLayer(baseLayer);
+            if(baseLayer) map.removeLayer(baseLayer);
             baseLayer = L.tileLayer(mapStyles[currentStyleIndex], {
                 maxZoom: 20, subdomains:['mt0','mt1','mt2','mt3']
             }).addTo(map);
@@ -198,28 +193,18 @@
             div.className = 'toast';
             div.innerText = msg;
             box.appendChild(div);
-            setTimeout(() => div.remove(), 4000);
+            setTimeout(() => div.remove(), 3000);
         }
 
-        async function getSnapToRoads(points) {
-            if(points.length < 2) return points;
-            const coordStr = points.map(p => `${p[1]},${p[0]}`).join(';');
-            try {
-                const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${coordStr}?overview=full&geometries=geojson`);
-                const data = await res.json();
-                if(data.routes && data.routes[0]) {
-                    return data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
-                }
-            } catch(e) { return points; }
-            return points;
-        }
+        window.copyToClipboard = (text) => {
+            navigator.clipboard.writeText(text).then(() => alert("Copiado!"));
+        };
 
         function monitor() {
-            const dateFilter = document.getElementById('filter-date');
-            
             onValue(ref(db, 'entregadores'), (snap) => {
                 const data = snap.val();
                 const list = document.getElementById('driver-list');
+                const selectedDate = document.getElementById('filter-date').value;
                 list.innerHTML = "";
 
                 for(let id in data) {
@@ -227,108 +212,95 @@
                     const isMoving = d.speed > 0.5;
                     if(activeFilters[id] === undefined) activeFilters[id] = true;
 
-                    // Alerta de movimento em tempo real
-                    if(markers[id] && markers[id].getLatLng().lat !== d.lat) {
-                        showToast(`${id} está se movendo...`);
-                    }
-
                     if(activeFilters[id]) {
+                        // Marcador
                         const icon = L.divIcon({
                             className: 'custom-icon',
                             html: `<div class="profile-icon ${isMoving ? 'moving' : ''}"><span>${id.substring(0,2)}</span></div>`,
                             iconSize: [50, 50], iconAnchor: [25, 50]
                         });
 
-                        if(markers[id]) markers[id].setLatLng([d.lat, d.lng]).setIcon(icon);
-                        else {
+                        if(markers[id]) {
+                            if(markers[id].getLatLng().lat !== d.lat) showToast(`${id} se movendo...`);
+                            markers[id].setLatLng([d.lat, d.lng]).setIcon(icon);
+                        } else {
                             markers[id] = L.marker([d.lat, d.lng], {icon}).addTo(map);
-                            markers[id].on('click', () => showDetails(id, d));
+                            markers[id].on('click', () => openPopup(id, d));
                         }
 
-                        // Lógica de Histórico e Estatísticas
-                        const histQuery = query(ref(db, 'historico/' + id), orderByChild('date'), equalTo(dateFilter.value));
-                        onValue(histQuery, async (hSnap) => {
+                        // Rastro
+                        onValue(ref(db, 'historico/' + id), (hSnap) => {
                             let pts = [];
-                            let idleTime = 0, moveTime = 0, lastTs = null, totalDist = 0;
+                            let idleTime = 0, moveTime = 0, lastTs = null;
                             
-                            hSnap.forEach(p => {
-                                const v = p.val();
-                                pts.push([v.lat, v.lng]);
-                                if(lastTs) {
-                                    let diff = (v.ts - lastTs) / 1000 / 60; // min
-                                    if(v.speed > 0.5) moveTime += diff; else idleTime += diff;
+                            hSnap.forEach(child => {
+                                const v = child.val();
+                                if(v.date === selectedDate) {
+                                    pts.push([v.lat, v.lng]);
+                                    if(lastTs) {
+                                        let diff = (v.ts - lastTs) / 60000;
+                                        if(v.speed > 0.5) moveTime += diff; else idleTime += diff;
+                                    }
+                                    lastTs = v.ts;
                                 }
-                                lastTs = v.ts;
                             });
 
-                            const snappedPts = await getSnapToRoads(pts);
-                            if(polylines[id]) polylines[id].setLatLngs(snappedPts);
-                            else polylines[id] = L.polyline(snappedPts, {color: '#3b82f6', weight: 4}).addTo(map);
+                            if(polylines[id]) polylines[id].setLatLngs(pts);
+                            else polylines[id] = L.polyline(pts, {color: '#3b82f6', weight: 4, opacity: 0.7}).addTo(map);
 
-                            if(id === myName || Object.keys(data).length === 1 || activeFilters[id]) {
-                                updateStats(id, idleTime, moveTime, pts.length);
-                            }
+                            const stats = document.getElementById('stats-panel');
+                            const content = document.getElementById('stats-content');
+                            stats.classList.remove('hidden');
+                            content.innerHTML = `<div class='bg-blue-50 p-2 rounded'><b>${id}</b><br>Parado: ${Math.round(idleTime)}min<br>Movimento: ${Math.round(moveTime)}min</div>`;
                         });
+                    } else {
+                        if(markers[id]) { map.removeLayer(markers[id]); delete markers[id]; }
+                        if(polylines[id]) { map.removeLayer(polylines[id]); delete polylines[id]; }
                     }
 
                     list.innerHTML += `
-                        <div class="p-3 bg-white rounded-xl border border-slate-100 shadow-sm">
-                            <div class="flex items-center justify-between mb-2">
-                                <label class="flex items-center gap-2 cursor-pointer">
-                                    <input type="checkbox" ${activeFilters[id] ? 'checked' : ''} onchange="toggleFilter('${id}')" class="w-4 h-4 accent-blue-600">
-                                    <span class="font-black text-slate-800 text-[10px] uppercase">${id}</span>
-                                </label>
-                                <span class="status-badge ${isMoving ? 'status-moving' : 'status-idle'}">${isMoving ? 'EM MOVIMENTO' : 'PARADO'}</span>
-                            </div>
+                        <div class="flex items-center justify-between p-3 bg-white rounded-xl border border-slate-100 shadow-sm">
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" ${activeFilters[id] ? 'checked' : ''} onchange="window.toggleFilter('${id}')" class="w-4 h-4 accent-blue-600">
+                                <span class="font-black text-slate-800 text-[10px] uppercase">${id}</span>
+                            </label>
+                            <span class="status-badge ${isMoving ? 'status-moving' : 'status-idle'}">${isMoving ? 'MOV' : 'PAR'}</span>
                         </div>`;
                 }
             });
         }
 
-        async function showDetails(id, d) {
+        async function openPopup(id, d) {
             const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${d.lat}&lon=${d.lng}`);
             const addr = (await res.json()).display_name || "Endereço não identificado";
             const gMaps = `https://www.google.com/maps?q=${d.lat},${d.lng}`;
-            const text = `ENTREGADOR: ${id}\nSTATUS: ${d.speed > 0.5 ? 'Movimento' : 'Parado'}\nLOCAL: ${addr}\nLINK: ${gMaps}`;
-            
+            const fullInfo = `Entregador: ${id}\nEndereço: ${addr}\nLink: ${gMaps}`;
+
             markers[id].bindPopup(`
-                <div class="p-2 font-bold text-[10px]">
-                    <p class="text-blue-600 mb-1">DETALHES DE ${id}</p>
-                    <p class="text-slate-500 mb-2">${addr}</p>
-                    <a href="${gMaps}" target="_blank" class="text-blue-500 underline">Abrir no Maps</a>
-                    <button onclick="copyToClipboard('${text.replace(/'/g,"")}')" class="copy-btn">Copiar Info</button>
+                <div style="font-size:11px; font-weight:bold;">
+                    <span style="color:#2563eb">${id}</span><br>${addr}<br>
+                    <a href="${gMaps}" target="_blank" style="color:blue">Abrir Google Maps</a>
+                    <button onclick="copyToClipboard('${fullInfo.replace(/'/g, "")}')" class="copy-btn">Copiar Tudo</button>
                 </div>
             `).openPopup();
         }
 
-        function updateStats(id, idle, move, count) {
-            const panel = document.getElementById('stats-panel');
-            const content = document.getElementById('stats-content');
-            panel.classList.remove('hidden');
-            content.innerHTML = `
-                <div class="bg-slate-50 p-2 rounded-lg">
-                    <p>🚚 Atividade: ${id}</p>
-                    <p>🛑 Tempo Parado: ${idle.toFixed(1)} min</p>
-                    <p>🛣️ Em Trânsito: ${move.toFixed(1)} min</p>
-                    <p>📍 Pontos Coletados: ${count}</p>
-                </div>
-            `;
-        }
-
-        window.copyToClipboard = (t) => { navigator.clipboard.writeText(t); alert("Copiado!"); };
-        
-        window.toggleFilter = (id) => { activeFilters[id] = !activeFilters[id]; monitor(); };
+        window.toggleFilter = (id) => {
+            activeFilters[id] = !activeFilters[id];
+            monitor();
+        };
 
         window.clearHistoryByDate = async () => {
             const date = document.getElementById('filter-date').value;
             if(!confirm(`Apagar histórico de ${date}?`)) return;
-            
-            const driversSnap = await get(ref(db, 'historico'));
-            driversSnap.forEach(dSnap => {
-                dSnap.forEach(hSnap => {
-                    if(hSnap.val().date === date) remove(ref(db, `historico/${dSnap.key}/${hSnap.key}`));
+            const histRef = ref(db, 'historico');
+            const snap = await get(histRef);
+            snap.forEach(driver => {
+                driver.forEach(entry => {
+                    if(entry.val().date === date) remove(ref(db, `historico/${driver.key}/${entry.key}`));
                 });
             });
+            alert("Histórico do dia removido.");
             location.reload();
         };
 
