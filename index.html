@@ -44,9 +44,12 @@
         <div class="w-full max-w-sm bg-white p-10 rounded-[3.5rem] shadow-2xl text-center border border-slate-100">
             <div id="driver-avatar" class="w-24 h-24 bg-blue-600 rounded-full mx-auto mb-6 flex items-center justify-center text-white text-3xl font-black shadow-lg">?</div>
             <h2 id="driver-display-name" class="text-2xl font-black text-slate-800 uppercase mb-8 italic"></h2>
-            <button onclick="toggleGPS()" id="btn-gps" class="w-full bg-emerald-500 text-white py-12 rounded-[2.5rem] font-black text-3xl shadow-2xl transition-all active:scale-95">LIGAR GPS</button>
+            <button onclick="toggleGPS()" id="btn-gps" class="w-full
+            bg-emerald-500 text-white py-12 rounded-[2.5rem] font-black text-3xl
+            shadow-2xl transition-all active:scale-95">TESTAR</button>
         </div>
-        <button onclick="location.reload()" class="mt-8 text-slate-400 font-bold text-xs uppercase tracking-widest">Desconectar</button>
+        <button onclick="location.reload()" class="mt-8 text-slate-400 font-bold
+        text-xs uppercase tracking-widest">RE#$7990</button>
     </div>
 
     <div id="admin-section" class="hidden flex h-screen w-screen overflow-hidden">
@@ -124,7 +127,7 @@
             } else {
                 update(ref(db, 'entregadores/' + myName), { online: false });
                 navigator.geolocation.clearWatch(watchId); watchId = null;
-                btn.innerText = "LIGAR GPS";
+                btn.innerText = "Ligar";
                 btn.classList.replace('bg-red-500', 'bg-emerald-500');
             }
         };
