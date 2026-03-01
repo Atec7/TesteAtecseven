@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JA-TRACKER ULTRA COMMAND</title>
+    <title>JA-TRACKER COMMAND CENTER PRO</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -12,12 +12,11 @@
         body { font-family: 'Montserrat', sans-serif; margin: 0; padding: 0; background: #000; overflow: hidden; }
         #map { height: 100vh; width: 100%; z-index: 1; background: #0b0d10; }
         
-        /* Marcador com Nome fixo em cima */
         .driver-marker-container { display: flex; flex-direction: column; align-items: center; }
         .driver-label { 
-            background: rgba(0, 0, 0, 0.8); color: #fff; padding: 2px 8px; 
-            border-radius: 4px; font-size: 10px; font-weight: 900; 
-            margin-bottom: 4px; white-space: nowrap; border: 1px solid #2563eb;
+            background: #2563eb; color: #fff; padding: 2px 10px; border-radius: 20px;
+            font-size: 10px; font-weight: 900; margin-bottom: 5px; white-space: nowrap;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3); border: 2px solid white;
         }
         .profile-icon {
             width: 40px !important; height: 40px !important;
@@ -30,7 +29,6 @@
 
         .admin-panel { background: rgba(255, 255, 255, 0.98); backdrop-filter: blur(20px); z-index: 1000; }
         
-        /* Notificações Suaves */
         #toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; pointer-events: none; }
         .toast-msg { 
             background: #1e293b; color: white; padding: 12px 20px; border-radius: 12px; 
@@ -39,55 +37,48 @@
         }
         @keyframes slideIn { from { transform: translateX(120%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 
-        .leaflet-popup-content-wrapper { border-radius: 20px; border: 1px solid #eee; }
+        .copy-btn { background: #2563eb; color: white; padding: 10px; border-radius: 10px; width: 100%; margin-top: 10px; font-weight: 900; font-size: 10px; text-transform: uppercase; border: none; cursor: pointer; }
     </style>
 </head>
 <body>
 
     <div id="toast-container"></div>
-    <audio id="silent-mode" loop><source src="data:audio/wav;base64,UklGRiQAAABXQVZFRm10IBAAAAABAAEARKwAAIhAAABAAgAZBkRhdGEAAAAA" type="audio/wav"></audio>
+    <audio id="bg-audio" loop><source src="data:audio/wav;base64,UklGRiQAAABXQVZFRm10IBAAAAABAAEARKwAAIhAAABAAgAZBkRhdGEAAAAA" type="audio/wav"></audio>
 
     <div id="setup-section" class="fixed inset-0 z-[2000] flex items-center justify-center bg-slate-950 p-4">
         <div class="w-full max-w-sm bg-white p-10 rounded-[3rem] shadow-2xl text-center">
             <h1 class="text-4xl font-black text-slate-900 italic mb-2 tracking-tighter">JA-SYSTEM <span class="text-blue-600 font-bold">PRO</span></h1>
-            <p class="text-[10px] font-bold text-slate-400 mb-8">COMMAND CENTER V3.0</p>
-            <input type="text" id="user-id" placeholder="NOME DO ENTREGADOR" class="w-full p-5 bg-slate-100 rounded-2xl outline-none font-black text-center text-xl uppercase mb-4 border-none shadow-inner">
-            <button onclick="startApp()" class="w-full bg-blue-600 text-white py-5 rounded-2xl font-black text-lg shadow-xl hover:bg-blue-700 active:scale-95 transition-all">INICIAR SESSÃO</button>
+            <input type="text" id="user-id" placeholder="SEU NOME" class="w-full p-5 bg-slate-100 rounded-2xl outline-none font-black text-center text-xl uppercase mb-4 border-none">
+            <button onclick="startApp()" class="w-full bg-blue-600 text-white py-5 rounded-2xl font-black text-lg shadow-xl hover:bg-blue-700 transition-all">INICIAR SESSÃO</button>
         </div>
     </div>
 
     <div id="driver-section" class="hidden fixed inset-0 z-[1500] flex flex-col items-center justify-center p-6 bg-slate-50">
-        <div class="w-full max-w-sm bg-white p-12 rounded-[4rem] shadow-2xl text-center border-4 border-white">
-            <div id="driver-avatar" class="w-24 h-24 bg-blue-600 rounded-full mx-auto mb-6 flex items-center justify-center text-white text-4xl font-black shadow-2xl">?</div>
-            <h2 id="driver-display-name" class="text-2xl font-black text-slate-800 uppercase mb-4 italic"></h2>
-            <p class="text-[10px] text-slate-400 font-bold mb-10 uppercase tracking-widest">Mantenha esta aba aberta</p>
-            
-            <button id="btn-gps" onclick="toggleGPS()" class="w-full bg-emerald-500 text-white py-12 rounded-[2.5rem] font-black text-3xl shadow-2xl transition-all">ATIVAR GPS</button>
-            <div id="status-lock" class="hidden w-full bg-slate-900 text-emerald-400 py-10 rounded-[2.5rem] font-black text-xl uppercase shadow-2xl">
-                🛰️ RASTREIO ATIVO
-            </div>
+        <div class="w-full max-w-sm bg-white p-10 rounded-[3.5rem] shadow-2xl text-center border">
+            <div id="driver-avatar" class="w-20 h-20 bg-blue-600 rounded-full mx-auto mb-6 flex items-center justify-center text-white text-3xl font-black">?</div>
+            <h2 id="driver-display-name" class="text-2xl font-black text-slate-800 uppercase mb-8 italic"></h2>
+            <button id="btn-gps" onclick="toggleGPS()" class="w-full bg-emerald-500 text-white py-12 rounded-[2.5rem] font-black text-3xl shadow-2xl active:scale-95">ATIVAR GPS</button>
+            <div id="status-ativo" class="hidden w-full bg-slate-900 text-emerald-400 py-10 rounded-[2.5rem] font-black text-xl uppercase animate-pulse">🛰️ RASTREIO ATIVO</div>
+            <p class="text-[10px] text-slate-400 font-bold mt-6 uppercase">O monitoramento funciona mesmo com a tela bloqueada.</p>
         </div>
     </div>
 
     <div id="admin-section" class="hidden flex h-screen w-screen overflow-hidden">
-        <div class="admin-panel w-80 h-full flex flex-col p-6 shadow-2xl">
-            <div class="flex justify-between items-center mb-8">
-                <h2 class="font-black text-slate-900 text-xl italic italic">MONITOR</h2>
-                <div class="flex gap-2">
-                    <button onclick="toggleMapStyle()" class="bg-slate-100 p-2 rounded-lg text-xs font-bold">MAPA</button>
-                </div>
+        <div class="admin-panel w-80 h-full flex flex-col p-6 shadow-2xl overflow-y-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="font-black text-slate-900 text-xl italic tracking-tighter">COMANDO</h2>
+                <button onclick="toggleMapStyle()" class="bg-slate-900 text-white text-[9px] px-2 py-1 rounded font-black uppercase">Mapa</button>
+            </div>
+            <input type="date" id="filter-date" class="w-full p-3 bg-slate-100 rounded-xl font-bold text-xs mb-6 outline-none">
+            
+            <div class="space-y-4 flex-1" id="driver-list-container">
+                <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Entregadores Ativos</h3>
+                <div id="driver-list" class="space-y-3"></div>
             </div>
 
-            <div class="mb-6">
-                <label class="text-[10px] font-black text-slate-400 uppercase mb-2 block">Data de Consulta</label>
-                <input type="date" id="filter-date" class="w-full p-3 bg-slate-50 rounded-xl font-bold text-xs outline-none border border-slate-100">
-            </div>
-
-            <div class="flex-1 overflow-y-auto space-y-3" id="driver-list">
-                </div>
-
-            <div class="pt-6 mt-4 border-t border-slate-100">
-                <button onclick="location.reload()" class="w-full bg-slate-950 text-white py-4 rounded-2xl font-black text-xs uppercase tracking-widest">Sair do Painel</button>
+            <div class="pt-6 border-t border-slate-200">
+                <button onclick="clearHistoryByDate()" class="w-full bg-red-50 text-red-600 py-4 rounded-2xl font-black text-[10px] uppercase mb-2">Limpar Histórico</button>
+                <button onclick="location.reload()" class="w-full bg-slate-100 text-slate-500 py-4 rounded-2xl font-black text-[10px] uppercase">Sair</button>
             </div>
         </div>
         <div class="flex-1 relative"><div id="map"></div></div>
@@ -106,7 +97,7 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
-        let myName = "", watchId = null, map, markers = {}, polylines = {}, activeRoutes = {}, lastPos = {};
+        let myName = "", watchId = null, map, markers = {}, polylines = {}, activeRoutes = {}, lastStates = {};
         let screenOnStart = Date.now(), screenOffTotal = 0, screenOnTotal = 0;
         let mapStyles = ['http://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'];
         let currentStyleIndex = 0, baseLayer;
@@ -114,9 +105,9 @@
         document.getElementById('filter-date').valueAsDate = new Date();
 
         window.startApp = () => {
-            const val = document.getElementById('user-id').value.trim().toUpperCase();
-            if(!val) return;
-            myName = val;
+            const input = document.getElementById('user-id');
+            myName = input.value.trim().toUpperCase();
+            if(!myName) return;
             document.getElementById('setup-section').classList.add('hidden');
             if(myName === 'ADM') {
                 document.getElementById('admin-section').classList.remove('hidden');
@@ -128,21 +119,20 @@
             }
         };
 
-        // GATILHO DE ALTA PERFORMANCE PARA O ENTREGADOR
         window.toggleGPS = () => {
             if(watchId) return;
-
-            // Truque de Áudio para não suspender a aba
-            const audio = document.getElementById('silent-mode');
+            
+            // Truque de áudio para manter processo vivo
+            const audio = document.getElementById('bg-audio');
             audio.play().catch(() => {});
 
-            document.getElementById('btn-gps').classList.add('hidden');
-            document.getElementById('status-lock').classList.remove('hidden');
-
-            // Monitor de Tela Físico (Wake Lock API se disponível)
+            // Solicitar Wake Lock para CPU não dormir
             if ('wakeLock' in navigator) {
                 navigator.wakeLock.request('screen').catch(() => {});
             }
+
+            document.getElementById('btn-gps').classList.add('hidden');
+            document.getElementById('status-ativo').classList.remove('hidden');
 
             watchId = navigator.geolocation.watchPosition((pos) => {
                 const now = Date.now();
@@ -155,23 +145,12 @@
                 };
                 set(ref(db, 'entregadores/' + myName), { ...stats, online: true });
                 push(ref(db, 'historico/' + myName), stats);
-            }, (err) => {
-                console.error(err);
-                alert("Ative o GPS em modo ALTA PRECISÃO nas configurações do celular!");
-            }, { 
-                enableHighAccuracy: true, 
-                maximumAge: 0, 
-                timeout: 10000 
-            });
+            }, null, { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 });
 
-            // Monitor de tempo de tela bloqueada
             document.addEventListener('visibilitychange', () => {
                 const diff = Date.now() - screenOnStart;
-                if (document.visibilityState === 'hidden') {
-                    screenOnTotal += diff;
-                } else {
-                    screenOffTotal += diff;
-                }
+                if (document.visibilityState === 'hidden') screenOnTotal += diff;
+                else screenOffTotal += diff;
                 screenOnStart = Date.now();
             });
         };
@@ -192,113 +171,129 @@
                 const data = snap.val();
                 const list = document.getElementById('driver-list');
                 list.innerHTML = "";
+                const bounds = L.latLngBounds();
 
                 for(let id in data) {
                     const d = data[id];
-                    
-                    // Notificação de Movimento
-                    const moving = d.speed > 0.4;
-                    if(lastPos[id] !== undefined && lastPos[id] !== moving) {
-                        spawnToast(moving ? `${id} iniciou deslocamento` : `${id} parou no local`);
-                    }
-                    lastPos[id] = moving;
+                    const moving = d.speed > 0.5;
 
-                    const iconHtml = `
-                        <div class="driver-marker-container">
-                            <div class="driver-label">${id}</div>
-                            <div class="profile-icon"><span>${id.substring(0,2)}</span></div>
-                        </div>`;
-                    
+                    // Alertas Suaves
+                    if(lastStates[id] !== undefined && lastStates[id] !== moving) {
+                        spawnToast(moving ? `${id} iniciou deslocamento` : `${id} parou`);
+                    }
+                    lastStates[id] = moving;
+
+                    const iconHtml = `<div class="driver-marker-container"><div class="driver-label">${id}</div><div class="profile-icon"><span>${id.substring(0,2)}</span></div></div>`;
                     const icon = L.divIcon({ className: '', html: iconHtml, iconSize:[40,60], iconAnchor:[20,60] });
 
                     if(!markers[id]) {
                         markers[id] = L.marker([d.lat, d.lng], {icon}).addTo(map);
-                        markers[id].on('click', () => focusDriver(id, d));
+                        markers[id].on('click', () => focusDriver(id));
                     } else {
                         markers[id].setLatLng([d.lat, d.lng]).setIcon(icon);
-                        if(activeRoutes[id]) {
-                            markers[id].openPopup();
-                            updatePopupContent(id, d);
-                        }
                     }
+                    bounds.extend([d.lat, d.lng]);
 
                     list.innerHTML += `
-                        <div onclick="window.focusDriver('${id}', null)" class="p-4 bg-white rounded-2xl border border-slate-100 shadow-sm cursor-pointer hover:border-blue-500 transition-all">
-                            <div class="flex justify-between items-center">
-                                <span class="font-black text-xs text-slate-800">${id}</span>
-                                <div class="flex items-center gap-2">
-                                    <span class="text-[8px] font-bold ${d.isLocked?'text-red-500':'text-emerald-500'}">${d.isLocked?'TELA BLOQUEADA':'TELA LIGADA'}</span>
-                                    <div class="w-2 h-2 rounded-full ${d.online?'bg-emerald-500':'bg-slate-300'}"></div>
-                                </div>
+                        <div class="p-3 bg-white rounded-xl border flex flex-col gap-2 shadow-sm">
+                            <div class="flex justify-between items-center" onclick="window.focusDriver('${id}')">
+                                <span class="font-black text-xs uppercase">${id}</span>
+                                <span class="text-[8px] font-bold ${d.isLocked?'text-red-500':'text-green-500'}">${d.isLocked?'OFF':'TELA ON'}</span>
+                            </div>
+                            <div class="flex gap-1">
+                                <button onclick="window.toggleRoute('${id}')" class="flex-1 bg-blue-600 text-white text-[8px] p-2 rounded font-black uppercase">Ver Rota</button>
+                                <button onclick="window.deleteUser('${id}')" class="bg-red-500 text-white px-3 rounded font-black italic">X</button>
                             </div>
                         </div>`;
                     
-                    if(activeRoutes[id]) drawLiveRoute(id);
+                    if(activeRoutes[id]) updateLiveRoute(id);
                 }
+                if(Object.keys(data || {}).length > 0) map.fitBounds(bounds, {padding:[60,60], maxZoom: 18});
             });
         }
 
-        window.focusDriver = (id, d) => {
+        window.focusDriver = (id) => {
             get(ref(db, 'entregadores/' + id)).then(snap => {
-                const val = snap.val();
-                activeRoutes[id] = true;
-                map.flyTo([val.lat, val.lng], 18, { duration: 2, easeLinearity: 0.25 });
-                showPopup(id, val);
+                const d = snap.val();
+                map.flyTo([d.lat, d.lng], 18, { duration: 2 });
+                showPopup(id, d);
             });
         };
 
-        function showPopup(id, d) {
-            markers[id].bindPopup('Carregando...').openPopup();
-            updatePopupContent(id, d);
-        }
-
-        async function updatePopupContent(id, d) {
+        async function showPopup(id, d) {
             const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${d.lat}&lon=${d.lng}`);
-            const addr = (await res.json()).display_name || "Endereço em processamento...";
+            const addr = (await res.json()).display_name || "Buscando endereço...";
             
-            const h = Math.floor(d.off / 3600000);
-            const m = Math.floor((d.off % 3600000) / 60000);
-            const s = Math.floor((d.off % 60000) / 1000);
-            
-            const content = `
-                <div class="p-2 font-bold text-[11px] leading-tight">
-                    <div class="text-blue-600 text-lg font-black mb-1 italic">${id}</div>
-                    <div class="mb-3 text-slate-400 uppercase text-[9px]">Status: ${d.speed > 0.5 ? 'Em Trânsito' : 'Parado'}</div>
-                    <div class="bg-slate-50 p-2 rounded-lg mb-2">
-                        <span class="text-red-500">📵 Tela Bloqueada:</span> ${h}h ${m}m ${s}s<br>
-                        <span class="text-emerald-500">📱 Tela Ligada:</span> ${Math.floor(d.on/60000)}min
+            const timer = setInterval(() => {
+                if(!markers[id].isPopupOpen()) return clearInterval(timer);
+                const elapsed = Date.now() - d.ts;
+                const h = Math.floor(elapsed/3600000);
+                const m = Math.floor((elapsed%3600000)/60000);
+                const s = Math.floor((elapsed%60000)/1000);
+
+                const offH = Math.floor(d.off / 3600000);
+                const offM = Math.floor((d.off % 3600000) / 60000);
+                const offS = Math.floor((d.off % 60000) / 1000);
+
+                markers[id].getPopup().setContent(`
+                    <div class="p-1 font-bold text-[10px]">
+                        <b class="text-blue-600 uppercase text-xs">${id}</b><br>
+                        TEMPO AQUI: ${h}h ${m}m ${s}s<br>
+                        <hr class="my-1">
+                        📵 TELA BLOQUEADA: ${offH}h ${offM}m ${offS}s<br>
+                        📍 ${addr}<br>
+                        <button onclick="window.copyAll('${id}', '${addr}', ${d.lat}, ${d.lng})" class="copy-btn">Copiar Tudo</button>
                     </div>
-                    <div class="text-slate-600 mb-2">${addr}</div>
-                    <button onclick="copyInfo('${id}', '${addr}', ${d.lat}, ${d.lng})" class="w-full bg-blue-600 text-white py-2 rounded-lg font-black text-[9px] uppercase">Copiar Endereço</button>
-                </div>
-            `;
-            if(markers[id].getPopup()) markers[id].getPopup().setContent(content);
+                `);
+            }, 1000);
+
+            markers[id].bindPopup('...').openPopup();
         }
 
-        window.copyInfo = (id, addr, lat, lng) => {
-            const link = `https://www.google.com/maps?q=${lat},${lng}`;
-            navigator.clipboard.writeText(`ENTREGADOR: ${id}\nLOCAL: ${addr}\nMAPS: ${link}`);
-            alert("Informações copiadas!");
+        window.copyAll = (id, addr, lat, lng) => {
+            const link = `https://www.google.com/maps?q=$${lat},${lng}`;
+            navigator.clipboard.writeText(`${id}\nLocal: ${addr}\nMaps: ${link}`);
+            alert("Copiado!");
         };
 
-        function drawLiveRoute(id) {
+        window.toggleRoute = (id) => {
+            activeRoutes[id] = !activeRoutes[id];
+            if(!activeRoutes[id] && polylines[id]) { map.removeLayer(polylines[id]); delete polylines[id]; }
+            monitor();
+        };
+
+        function updateLiveRoute(id) {
             const date = document.getElementById('filter-date').value;
             get(ref(db, 'historico/' + id)).then(snap => {
                 let pts = [];
                 snap.forEach(c => { if(c.val().date === date) pts.push([c.val().lat, c.val().lng]); });
                 if(polylines[id]) polylines[id].setLatLngs(pts);
-                else polylines[id] = L.polyline(pts, {color:'#2563eb', weight:4, opacity:0.6, lineJoin:'round'}).addTo(map);
+                else polylines[id] = L.polyline(pts, {color:'#2563eb', weight:4, opacity:0.6}).addTo(map);
             });
         }
 
+        window.deleteUser = async (id) => {
+            if(confirm(`Deletar ${id} e histórico?`)) {
+                await remove(ref(db, 'entregadores/' + id));
+                await remove(ref(db, 'historico/' + id));
+                location.reload();
+            }
+        };
+
+        window.clearHistoryByDate = async () => {
+            const date = document.getElementById('filter-date').value;
+            if(!confirm(`Limpar ${date}?`)) return;
+            const snap = await get(ref(db, 'historico'));
+            snap.forEach(d => { d.forEach(e => { if(e.val().date === date) remove(ref(db, `historico/${d.key}/${e.key}`)); }); });
+            alert("Limpo!");
+        };
+
         function spawnToast(m) {
-            const container = document.getElementById('toast-container');
-            const div = document.createElement('div');
-            div.className = 'toast-msg';
-            div.innerText = m;
-            container.appendChild(div);
-            setTimeout(() => div.remove(), 4000);
+            const c = document.getElementById('toast-container');
+            const d = document.createElement('div');
+            d.className = 'toast-msg'; d.innerText = m;
+            c.appendChild(d); setTimeout(() => d.remove(), 4000);
         }
     </script>
 </body>
-</html>
+    </html>
