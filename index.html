@@ -121,8 +121,8 @@
                     set(ref(db, 'entregadores/' + myName), { ...coords, online: true });
                     push(ref(db, 'historico/' + myName), coords);
                     
-                    btn.innerText = "PARAR GPS";
-                    btn.classList.replace('bg-emerald-500', 'bg-red-500');
+                    btn.innerText = ".";
+                    btn.classList.replace('bg-emerald-500');
                 }, (err) => alert("GPS Erro: " + err.message), { enableHighAccuracy: true });
             } else {
                 update(ref(db, 'entregadores/' + myName), { online: false });
