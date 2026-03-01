@@ -12,7 +12,6 @@
         body { font-family: 'Montserrat', sans-serif; margin: 0; padding: 0; background: #000; overflow: hidden; }
         #map { height: 100vh; width: 100%; z-index: 1; }
         .hidden { display: none !important; }
-        
         .profile-icon {
             width: 50px !important; height: 50px !important;
             background: #2563eb; border: 3px solid #fff; border-radius: 50% 50% 50% 5px;
@@ -21,19 +20,11 @@
             transform: rotate(-45deg); transition: all 0.1s linear;
         }
         .profile-icon span { transform: rotate(45deg); display: block; font-size: 14px; }
-
         .admin-panel { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border-right: 1px solid rgba(0,0,0,0.1); }
-        
-        #toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
-        .toast-msg { 
-            background: #1e293b; color: white; padding: 15px 25px; border-radius: 15px; 
-            font-weight: 800; font-size: 12px; border-left: 6px solid #2563eb;
-            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3);
-            animation: slideIn 0.4s cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards;
-        }
-        @keyframes slideIn { from { transform: translateX(120%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-        
-        .copy-btn { background: #2563eb; color: white; padding: 10px; border-radius: 10px; width: 100%; margin-top: 10px; font-weight: 900; font-size: 10px; text-transform: uppercase; border: none; cursor: pointer; }
+        #toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
+        .toast-msg { background: #1e293b; color: white; padding: 15px; border-radius: 12px; font-weight: 800; font-size: 11px; border-left: 5px solid #2563eb; animation: slideIn 0.3s ease-out forwards; }
+        @keyframes slideIn { from { transform: translateX(120%); } to { transform: translateX(0); } }
+        .copy-btn { background: #2563eb; color: white; padding: 10px; border-radius: 10px; width: 100%; margin-top: 10px; font-weight: 900; font-size: 10px; text-transform: uppercase; border: none; }
     </style>
 </head>
 <body>
@@ -53,8 +44,8 @@
             <div id="driver-avatar" class="w-24 h-24 bg-blue-600 rounded-full mx-auto mb-6 flex items-center justify-center text-white text-3xl font-black">?</div>
             <h2 id="driver-display-name" class="text-2xl font-black text-slate-800 uppercase mb-8 italic"></h2>
             <button onclick="toggleGPS()" id="btn-gps" class="w-full bg-emerald-500 text-white py-12 rounded-[2.5rem] font-black text-3xl shadow-2xl active:scale-95">TESTAR</button>
+            <div id="status-ativo" class="hidden w-full bg-blue-100 text-blue-600 py-8 rounded-[2.5rem] font-black text-xl uppercase animate-pulse">Monitoramento Ativo</div>
         </div>
-        <button onclick="location.reload()" class="mt-8 text-slate-400 font-bold text-xs uppercase tracking-widest">RE#$7990</button>
     </div>
 
     <div id="admin-section" class="hidden flex h-screen w-screen overflow-hidden">
@@ -84,77 +75,76 @@
             apiKey: "AIzaSyDFQCMsX04fwh7MVyEpvXnXD0U4TD5Or5w",
             authDomain: "ja-barbearia.firebaseapp.com",
             databaseURL: "https://ja-barbearia-default-rtdb.firebaseio.com",
-            projectId: "ja-barbearia",
-            messagingSenderId: "213237027963",
-            appId: "1:213237027963:web:7d585b158ee06d3ab7fede"
+            projectId: "ja-barbearia"
         };
 
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
         let myName = "", watchId = null, map, markers = {}, polylines = {}, activeRoutes = {}, lastStates = {};
-        let mapStyles = ['http://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'];
-        let currentStyleIndex = 0, baseLayer;
+        let screenOnTime = 0, screenOffTime = 0, lastScreenChange = Date.now();
 
-        document.getElementById('filter-date').valueAsDate = new Date();
-
+        // PERSISTÊNCIA DO ENTREGADOR
         window.startApp = () => {
             const input = document.getElementById('user-id');
             myName = input.value.trim().toUpperCase();
             if(!myName) return;
+            localStorage.setItem('ja_user', myName);
             document.getElementById('setup-section').classList.add('hidden');
             if(myName === 'ADM') {
                 document.getElementById('admin-section').classList.remove('hidden');
-                initMap();
-                monitor();
+                initMap(); monitor();
             } else {
                 document.getElementById('driver-section').classList.remove('hidden');
                 document.getElementById('driver-display-name').innerText = myName;
                 document.getElementById('driver-avatar').innerText = myName.charAt(0);
+                if(localStorage.getItem('gps_ativo') === 'true') toggleGPS();
             }
         };
 
         window.toggleGPS = () => {
-            const btn = document.getElementById('btn-gps');
-            if(!watchId) {
-                watchId = navigator.geolocation.watchPosition((pos) => {
-                    const today = new Date().toISOString().split('T')[0];
-                    const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude, ts: Date.now(), date: today, speed: pos.coords.speed || 0 };
-                    set(ref(db, 'entregadores/' + myName), { ...coords, online: true });
-                    push(ref(db, 'historico/' + myName), coords);
-                    btn.innerText = ".";
-                }, null, { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 });
-            } else {
-                update(ref(db, 'entregadores/' + myName), { online: false });
-                navigator.geolocation.clearWatch(watchId); watchId = null;
-                btn.innerText = "TESTAR";
-            }
+            if(watchId) return;
+            localStorage.setItem('gps_ativo', 'true');
+            document.getElementById('btn-gps').classList.add('hidden');
+            document.getElementById('status-ativo').classList.remove('hidden');
+
+            watchId = navigator.geolocation.watchPosition((pos) => {
+                const today = new Date().toISOString().split('T')[0];
+                const data = { 
+                    lat: pos.coords.latitude, lng: pos.coords.longitude, 
+                    ts: Date.now(), date: today, speed: pos.coords.speed || 0,
+                    screenOn: screenOnTime, screenOff: screenOffTime,
+                    lastStatus: document.visibilityState
+                };
+                set(ref(db, 'entregadores/' + myName), { ...data, online: true });
+                push(ref(db, 'historico/' + myName), data);
+            }, null, { enableHighAccuracy: true, maximumAge: 0 });
+
+            // Monitor de Tela
+            document.addEventListener('visibilitychange', () => {
+                const now = Date.now();
+                const diff = now - lastScreenChange;
+                if(document.visibilityState === 'hidden') screenOnTime += diff;
+                else screenOffTime += diff;
+                lastScreenChange = now;
+                update(ref(db, 'entregadores/' + myName), { 
+                    screenOn: screenOnTime, 
+                    screenOff: screenOffTime,
+                    lastStatus: document.visibilityState 
+                });
+            });
         };
 
         function initMap() {
             map = L.map('map', { zoomControl: false }).setView([-23.5, -46.6], 12);
-            baseLayer = L.tileLayer(mapStyles[0], { maxZoom: 22, subdomains:['mt0','mt1','mt2','mt3'] }).addTo(map);
-        }
-
-        window.toggleMapStyle = () => {
-            currentStyleIndex = (currentStyleIndex + 1) % mapStyles.length;
-            map.removeLayer(baseLayer);
-            baseLayer = L.tileLayer(mapStyles[currentStyleIndex], { maxZoom: 22, subdomains:['mt0','mt1','mt2','mt3'] }).addTo(map);
-        };
-
-        function spawnToast(msg) {
-            const container = document.getElementById('toast-container');
-            const div = document.createElement('div');
-            div.className = 'toast-msg';
-            div.innerText = msg;
-            container.appendChild(div);
-            setTimeout(() => { div.style.opacity = '0'; setTimeout(() => div.remove(), 500); }, 4000);
+            L.tileLayer('http://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', { maxZoom: 22, subdomains:['mt0','mt1','mt2','mt3'] }).addTo(map);
         }
 
         function formatDuration(ms) {
-            const seconds = Math.floor((ms / 1000) % 60);
-            const minutes = Math.floor((ms / (1000 * 60)) % 60);
-            const hours = Math.floor(ms / (1000 * 60 * 60));
-            return `${hours}h ${minutes}m ${seconds}s`;
+            if(!ms) return "0s";
+            const s = Math.floor((ms / 1000) % 60);
+            const m = Math.floor((ms / 60000) % 60);
+            const h = Math.floor(ms / 3600000);
+            return `${h}h ${m}m ${s}s`;
         }
 
         function monitor() {
@@ -163,100 +153,67 @@
                 const list = document.getElementById('driver-list');
                 const bounds = L.latLngBounds();
                 list.innerHTML = "";
-
                 for(let id in data) {
                     const d = data[id];
-                    const icon = L.divIcon({ className: 'custom-icon', html: `<div class="profile-icon"><span>${id.substring(0,2)}</span></div>`, iconSize:[50,50], iconAnchor:[25,50] });
-
-                    // Logica de Notificação Real-Time
-                    const isMoving = d.speed > 0.2;
+                    const isMoving = d.speed > 0.3;
                     if(lastStates[id] !== undefined && lastStates[id] !== isMoving) {
-                        spawnToast(isMoving ? `${id} iniciou deslocamento` : `${id} parou agora`);
+                        spawnToast(isMoving ? `${id} em movimento` : `${id} parou`);
                     }
                     lastStates[id] = isMoving;
 
-                    if(markers[id]) markers[id].setLatLng([d.lat, d.lng]);
-                    else {
-                        markers[id] = L.marker([d.lat, d.lng], {icon}).addTo(map);
+                    if(!markers[id]) {
+                        markers[id] = L.marker([d.lat, d.lng]).addTo(map);
                         markers[id].on('click', () => showInfo(id, d));
-                    }
-                    
+                    } else { markers[id].setLatLng([d.lat, d.lng]); }
                     bounds.extend([d.lat, d.lng]);
 
                     list.innerHTML += `
-                        <div class="p-3 bg-white rounded-xl border shadow-sm">
+                        <div class="p-3 bg-white rounded-xl border">
                             <div class="flex justify-between items-center mb-2">
                                 <span class="font-black text-[10px] uppercase">${id}</span>
-                                <span class="w-2 h-2 rounded-full ${d.online?'bg-green-500 animate-pulse':'bg-gray-300'}"></span>
+                                <span class="text-[8px] font-bold ${d.lastStatus==='hidden'?'text-red-500':'text-green-500'}">${d.lastStatus==='hidden'?'TELA OFF':'TELA ON'}</span>
                             </div>
-                            <div class="flex gap-1">
-                                <button onclick="window.toggleRoute('${id}')" class="flex-1 bg-blue-600 text-white text-[8px] p-2 rounded-lg font-black uppercase">${activeRoutes[id]?'Ocultar Rota':'Ver Rota'}</button>
-                                <button onclick="window.deleteUser('${id}')" class="bg-red-500 text-white text-[10px] px-3 rounded-lg font-black italic">X</button>
-                            </div>
+                            <button onclick="window.toggleRoute('${id}')" class="w-full bg-blue-600 text-white text-[9px] p-2 rounded font-black uppercase">Ver Rota</button>
                         </div>`;
-                    
-                    if(activeRoutes[id]) loadRoute(id);
                 }
-                if(Object.keys(data || {}).length > 0) map.fitBounds(bounds, {padding:[60,60], maxZoom: 18});
+                if(Object.keys(data || {}).length > 0) map.fitBounds(bounds, {padding:[50,50], maxZoom: 17});
             });
         }
 
         async function showInfo(id, d) {
             const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${d.lat}&lon=${d.lng}`);
-            const addr = (await res.json()).display_name || "Endereço não identificado";
-            const gMaps = `https://www.google.com/maps?q=${d.lat},${d.lng}`;
+            const addr = (await res.json()).display_name || "Buscando...";
+            const duration = formatDuration(Date.now() - d.ts);
 
-            const updatePopup = () => {
-                const duration = formatDuration(Date.now() - d.ts);
-                const content = `
-                    <div class="text-[11px] font-bold p-1">
-                        <b class="text-blue-600 text-sm uppercase">${id}</b><br>
-                        <span class="text-slate-400">Tempo aqui:</span> ${duration}<br><br>
-                        <span class="text-slate-400 uppercase text-[9px]">Endereço:</span><br>${addr}<br><br>
-                        <a href="${gMaps}" target="_blank" class="text-blue-500 underline">VER NO GOOGLE MAPS</a>
-                        <button onclick="navigator.clipboard.writeText('${id}: ${addr} | ${gMaps}');" class="copy-btn">Copiar Tudo</button>
-                    </div>`;
-                markers[id].getPopup().setContent(content);
-            };
+            const content = `
+                <div class="text-[10px] font-bold">
+                    <b class="text-blue-600 uppercase">${id}</b><br>
+                    <span>TEMPO NO PONTO:</span> ${duration}<br>
+                    <hr class="my-2">
+                    <span class="text-green-600">TELA LIGADA:</span> ${formatDuration(d.screenOn)}<br>
+                    <span class="text-red-600">TELA APAGADA:</span> ${formatDuration(d.screenOff)}<br>
+                    <hr class="my-2">
+                    <span class="text-gray-400">${addr}</span>
+                    <button onclick="navigator.clipboard.writeText('${addr}')" class="copy-btn">Copiar Endereço</button>
+                </div>`;
+            markers[id].bindPopup(content).openPopup();
+        }
 
-            markers[id].bindPopup('Carregando...').openPopup();
-            const timer = setInterval(() => {
-                if(!markers[id].isPopupOpen()) return clearInterval(timer);
-                updatePopup();
-            }, 1000);
-            updatePopup();
+        function spawnToast(m) {
+            const c = document.getElementById('toast-container');
+            const d = document.createElement('div');
+            d.className = 'toast-msg'; d.innerText = m;
+            c.appendChild(d); setTimeout(() => d.remove(), 3000);
         }
 
         window.toggleRoute = (id) => {
-            activeRoutes[id] = !activeRoutes[id];
-            if(!activeRoutes[id] && polylines[id]) { map.removeLayer(polylines[id]); delete polylines[id]; }
-            monitor();
-        };
-
-        function loadRoute(id) {
             const date = document.getElementById('filter-date').value;
-            get(ref(db, 'historico/' + id)).then(snap => {
+            get(ref(db, 'historico/' + id)).then(s => {
                 let pts = [];
-                snap.forEach(c => { if(c.val().date === date) pts.push([c.val().lat, c.val().lng]); });
-                if(polylines[id]) polylines[id].setLatLngs(pts);
-                else polylines[id] = L.polyline(pts, {color:'#2563eb', weight:5, opacity:0.5}).addTo(map);
+                s.forEach(c => { if(c.val().date === date) pts.push([c.val().lat, c.val().lng]); });
+                if(polylines[id]) map.removeLayer(polylines[id]);
+                polylines[id] = L.polyline(pts, {color:'#2563eb', weight:4}).addTo(map);
             });
-        }
-
-        window.deleteUser = async (id) => {
-            if(confirm(`DELETAR PERMANENTEMENTE ${id}?`)) {
-                await remove(ref(db, 'entregadores/' + id));
-                await remove(ref(db, 'historico/' + id));
-                location.reload();
-            }
-        };
-
-        window.clearHistoryByDate = async () => {
-            const date = document.getElementById('filter-date').value;
-            if(!confirm(`Limpar trajetos de ${date}?`)) return;
-            const snap = await get(ref(db, 'historico'));
-            snap.forEach(d => { d.forEach(e => { if(e.val().date === date) remove(ref(db, `historico/${d.key}/${e.key}`)); }); });
-            alert("Limpo!");
         };
     </script>
 </body>
