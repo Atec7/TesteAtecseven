@@ -9,27 +9,36 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&display=swap');
-        body { font-family: 'Montserrat', sans-serif; margin: 0; padding: 0; background: #000; }
+        body { font-family: 'Montserrat', sans-serif; margin: 0; padding: 0; background: #000; overflow: hidden; }
         #map { height: 100vh; width: 100%; z-index: 1; }
         .hidden { display: none !important; }
+        
         .profile-icon {
             width: 50px !important; height: 50px !important;
             background: #2563eb; border: 3px solid #fff; border-radius: 50% 50% 50% 5px;
             display: flex; align-items: center; justify-content: center;
             color: white; font-weight: 900; box-shadow: 0 0 20px rgba(0,0,0,0.5);
-            transform: rotate(-45deg); transition: all 0.2s linear;
+            transform: rotate(-45deg); transition: all 0.1s linear;
         }
         .profile-icon span { transform: rotate(45deg); display: block; font-size: 14px; }
+
         .admin-panel { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border-right: 1px solid rgba(0,0,0,0.1); }
-        .copy-btn { background: #2563eb; color: white; padding: 8px; border-radius: 8px; width: 100%; margin-top: 10px; font-weight: bold; font-size: 10px; text-transform: uppercase; }
-        #alert-box { position: fixed; top: 20px; right: 20px; z-index: 3000; }
-        .toast { background: #1e293b; color: white; padding: 10px; border-radius: 8px; margin-bottom: 5px; font-size: 11px; animation: slide 0.3s ease; }
-        @keyframes slide { from { transform: translateX(100%); } to { transform: translateX(0); } }
+        
+        #toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
+        .toast-msg { 
+            background: #1e293b; color: white; padding: 15px 25px; border-radius: 15px; 
+            font-weight: 800; font-size: 12px; border-left: 6px solid #2563eb;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3);
+            animation: slideIn 0.4s cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards;
+        }
+        @keyframes slideIn { from { transform: translateX(120%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        
+        .copy-btn { background: #2563eb; color: white; padding: 10px; border-radius: 10px; width: 100%; margin-top: 10px; font-weight: 900; font-size: 10px; text-transform: uppercase; border: none; cursor: pointer; }
     </style>
 </head>
 <body>
 
-    <div id="alert-box"></div>
+    <div id="toast-container"></div>
 
     <div id="setup-section" class="fixed inset-0 z-[2000] flex items-center justify-center bg-slate-950 p-4">
         <div class="w-full max-w-sm bg-white p-10 rounded-[3rem] shadow-2xl text-center">
@@ -41,9 +50,9 @@
 
     <div id="driver-section" class="hidden fixed inset-0 z-[1500] flex flex-col items-center justify-center p-6 bg-slate-50">
         <div class="w-full max-w-sm bg-white p-10 rounded-[3.5rem] shadow-2xl text-center border border-slate-100">
-            <div id="driver-avatar" class="w-24 h-24 bg-blue-600 rounded-full mx-auto mb-6 flex items-center justify-center text-white text-3xl font-black shadow-lg">?</div>
+            <div id="driver-avatar" class="w-24 h-24 bg-blue-600 rounded-full mx-auto mb-6 flex items-center justify-center text-white text-3xl font-black">?</div>
             <h2 id="driver-display-name" class="text-2xl font-black text-slate-800 uppercase mb-8 italic"></h2>
-            <button onclick="toggleGPS()" id="btn-gps" class="w-full bg-emerald-500 text-white py-12 rounded-[2.5rem] font-black text-3xl shadow-2xl transition-all active:scale-95">TESTAR</button>
+            <button onclick="toggleGPS()" id="btn-gps" class="w-full bg-emerald-500 text-white py-12 rounded-[2.5rem] font-black text-3xl shadow-2xl active:scale-95">TESTAR</button>
         </div>
         <button onclick="location.reload()" class="mt-8 text-slate-400 font-bold text-xs uppercase tracking-widest">RE#$7990</button>
     </div>
@@ -52,18 +61,15 @@
         <div class="admin-panel w-80 h-full z-[1000] flex flex-col p-6 shadow-2xl overflow-y-auto">
             <div class="flex justify-between items-center mb-6">
                 <h2 class="font-black text-slate-900 text-lg italic tracking-tighter">COMANDO</h2>
-                <button onclick="toggleMapStyle()" class="bg-slate-900 text-white text-[9px] px-2 py-1 rounded font-black">MAPA</button>
+                <button onclick="toggleMapStyle()" class="bg-slate-900 text-white text-[9px] px-2 py-1 rounded font-black uppercase">Mapa</button>
             </div>
-
-            <input type="date" id="filter-date" class="w-full p-3 bg-slate-100 rounded-xl font-bold text-xs mb-4 outline-none">
-
+            <input type="date" id="filter-date" class="w-full p-3 bg-slate-100 rounded-xl font-bold text-xs mb-6 outline-none">
             <div class="space-y-4 flex-1">
                 <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Entregadores Ativos</h3>
                 <div id="driver-list" class="space-y-3"></div>
             </div>
-
             <div class="pt-6 border-t border-slate-200">
-                <button onclick="clearHistoryByDate()" class="w-full bg-red-50 text-red-600 py-4 rounded-2xl font-black text-[10px] uppercase mb-2">Limpar Histórico Data</button>
+                <button onclick="clearHistoryByDate()" class="w-full bg-red-50 text-red-600 py-4 rounded-2xl font-black text-[10px] uppercase mb-2">Limpar Histórico</button>
                 <button onclick="location.reload()" class="w-full bg-slate-100 text-slate-500 py-4 rounded-2xl font-black text-[10px] uppercase">Sair</button>
             </div>
         </div>
@@ -85,7 +91,7 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
-        let myName = "", watchId = null, map, markers = {}, polylines = {}, activeRoutes = {};
+        let myName = "", watchId = null, map, markers = {}, polylines = {}, activeRoutes = {}, lastStates = {};
         let mapStyles = ['http://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'];
         let currentStyleIndex = 0, baseLayer;
 
@@ -94,7 +100,7 @@
         window.startApp = () => {
             const input = document.getElementById('user-id');
             myName = input.value.trim().toUpperCase();
-            if(!myName) return alert("Digite seu nome.");
+            if(!myName) return;
             document.getElementById('setup-section').classList.add('hidden');
             if(myName === 'ADM') {
                 document.getElementById('admin-section').classList.remove('hidden');
@@ -112,11 +118,11 @@
             if(!watchId) {
                 watchId = navigator.geolocation.watchPosition((pos) => {
                     const today = new Date().toISOString().split('T')[0];
-                    const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude, ts: Date.now(), date: today };
+                    const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude, ts: Date.now(), date: today, speed: pos.coords.speed || 0 };
                     set(ref(db, 'entregadores/' + myName), { ...coords, online: true });
                     push(ref(db, 'historico/' + myName), coords);
                     btn.innerText = ".";
-                }, null, { enableHighAccuracy: true, distanceFilter: 0 }); // Alta Precisão Total
+                }, null, { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 });
             } else {
                 update(ref(db, 'entregadores/' + myName), { online: false });
                 navigator.geolocation.clearWatch(watchId); watchId = null;
@@ -135,17 +141,39 @@
             baseLayer = L.tileLayer(mapStyles[currentStyleIndex], { maxZoom: 22, subdomains:['mt0','mt1','mt2','mt3'] }).addTo(map);
         };
 
+        function spawnToast(msg) {
+            const container = document.getElementById('toast-container');
+            const div = document.createElement('div');
+            div.className = 'toast-msg';
+            div.innerText = msg;
+            container.appendChild(div);
+            setTimeout(() => { div.style.opacity = '0'; setTimeout(() => div.remove(), 500); }, 4000);
+        }
+
+        function formatDuration(ms) {
+            const seconds = Math.floor((ms / 1000) % 60);
+            const minutes = Math.floor((ms / (1000 * 60)) % 60);
+            const hours = Math.floor(ms / (1000 * 60 * 60));
+            return `${hours}h ${minutes}m ${seconds}s`;
+        }
+
         function monitor() {
             onValue(ref(db, 'entregadores'), (snap) => {
                 const data = snap.val();
                 const list = document.getElementById('driver-list');
                 const bounds = L.latLngBounds();
-                let hasActive = false;
                 list.innerHTML = "";
 
                 for(let id in data) {
                     const d = data[id];
                     const icon = L.divIcon({ className: 'custom-icon', html: `<div class="profile-icon"><span>${id.substring(0,2)}</span></div>`, iconSize:[50,50], iconAnchor:[25,50] });
+
+                    // Logica de Notificação Real-Time
+                    const isMoving = d.speed > 0.2;
+                    if(lastStates[id] !== undefined && lastStates[id] !== isMoving) {
+                        spawnToast(isMoving ? `${id} iniciou deslocamento` : `${id} parou agora`);
+                    }
+                    lastStates[id] = isMoving;
 
                     if(markers[id]) markers[id].setLatLng([d.lat, d.lng]);
                     else {
@@ -154,41 +182,49 @@
                     }
                     
                     bounds.extend([d.lat, d.lng]);
-                    hasActive = true;
 
                     list.innerHTML += `
                         <div class="p-3 bg-white rounded-xl border shadow-sm">
                             <div class="flex justify-between items-center mb-2">
-                                <span class="font-black text-[10px]">${id}</span>
-                                <span class="w-2 h-2 rounded-full ${d.online?'bg-green-500':'bg-gray-300'}"></span>
+                                <span class="font-black text-[10px] uppercase">${id}</span>
+                                <span class="w-2 h-2 rounded-full ${d.online?'bg-green-500 animate-pulse':'bg-gray-300'}"></span>
                             </div>
                             <div class="flex gap-1">
-                                <button onclick="window.toggleRoute('${id}')" class="flex-1 bg-blue-600 text-white text-[8px] p-1 rounded font-bold">${activeRoutes[id]?'OCULTAR':'VER ROTA'}</button>
-                                <button onclick="window.deleteUser('${id}')" class="bg-red-500 text-white text-[8px] p-1 rounded font-bold italic">X</button>
+                                <button onclick="window.toggleRoute('${id}')" class="flex-1 bg-blue-600 text-white text-[8px] p-2 rounded-lg font-black uppercase">${activeRoutes[id]?'Ocultar Rota':'Ver Rota'}</button>
+                                <button onclick="window.deleteUser('${id}')" class="bg-red-500 text-white text-[10px] px-3 rounded-lg font-black italic">X</button>
                             </div>
                         </div>`;
                     
                     if(activeRoutes[id]) loadRoute(id);
                 }
-                if(hasActive) map.fitBounds(bounds, {padding:[50,50], maxZoom: 17});
+                if(Object.keys(data || {}).length > 0) map.fitBounds(bounds, {padding:[60,60], maxZoom: 18});
             });
         }
 
         async function showInfo(id, d) {
             const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${d.lat}&lon=${d.lng}`);
-            const addr = (await res.json()).display_name || "Buscando...";
-            const timeDiff = Math.round((Date.now() - d.ts) / 60000);
-            const timeTxt = timeDiff < 1 ? "Agora mesmo" : `Há ${timeDiff} min`;
+            const addr = (await res.json()).display_name || "Endereço não identificado";
             const gMaps = `https://www.google.com/maps?q=${d.lat},${d.lng}`;
 
-            markers[id].bindPopup(`
-                <div class="text-[10px] font-bold">
-                    <b class="text-blue-600">${id}</b> está aqui ${timeTxt}<br><br>
-                    ${addr}<br><br>
-                    <a href="${gMaps}" target="_blank" class="text-blue-500 underline">Abrir no Maps</a>
-                    <button onclick="navigator.clipboard.writeText('${id}: ${addr} | ${gMaps}'); alert('Copiado!')" class="copy-btn">Copiar Tudo</button>
-                </div>
-            `).openPopup();
+            const updatePopup = () => {
+                const duration = formatDuration(Date.now() - d.ts);
+                const content = `
+                    <div class="text-[11px] font-bold p-1">
+                        <b class="text-blue-600 text-sm uppercase">${id}</b><br>
+                        <span class="text-slate-400">Tempo aqui:</span> ${duration}<br><br>
+                        <span class="text-slate-400 uppercase text-[9px]">Endereço:</span><br>${addr}<br><br>
+                        <a href="${gMaps}" target="_blank" class="text-blue-500 underline">VER NO GOOGLE MAPS</a>
+                        <button onclick="navigator.clipboard.writeText('${id}: ${addr} | ${gMaps}');" class="copy-btn">Copiar Tudo</button>
+                    </div>`;
+                markers[id].getPopup().setContent(content);
+            };
+
+            markers[id].bindPopup('Carregando...').openPopup();
+            const timer = setInterval(() => {
+                if(!markers[id].isPopupOpen()) return clearInterval(timer);
+                updatePopup();
+            }, 1000);
+            updatePopup();
         }
 
         window.toggleRoute = (id) => {
@@ -199,34 +235,28 @@
 
         function loadRoute(id) {
             const date = document.getElementById('filter-date').value;
-            onValue(ref(db, 'historico/' + id), (snap) => {
+            get(ref(db, 'historico/' + id)).then(snap => {
                 let pts = [];
                 snap.forEach(c => { if(c.val().date === date) pts.push([c.val().lat, c.val().lng]); });
                 if(polylines[id]) polylines[id].setLatLngs(pts);
-                else polylines[id] = L.polyline(pts, {color:'#2563eb', weight:4, opacity:0.6}).addTo(map);
+                else polylines[id] = L.polyline(pts, {color:'#2563eb', weight:5, opacity:0.5}).addTo(map);
             });
         }
 
         window.deleteUser = async (id) => {
-            if(confirm(`DELETAR PERMANENTEMENTE ${id} e todos os seus dados?`)) {
+            if(confirm(`DELETAR PERMANENTEMENTE ${id}?`)) {
                 await remove(ref(db, 'entregadores/' + id));
                 await remove(ref(db, 'historico/' + id));
-                if(markers[id]) map.removeLayer(markers[id]);
-                if(polylines[id]) map.removeLayer(polylines[id]);
-                alert("Dados excluídos.");
+                location.reload();
             }
         };
 
         window.clearHistoryByDate = async () => {
             const date = document.getElementById('filter-date').value;
-            if(!confirm(`Limpar todos os trajetos de ${date}?`)) return;
+            if(!confirm(`Limpar trajetos de ${date}?`)) return;
             const snap = await get(ref(db, 'historico'));
-            snap.forEach(driver => {
-                driver.forEach(entry => {
-                    if(entry.val().date === date) remove(ref(db, `historico/${driver.key}/${entry.key}`));
-                });
-            });
-            alert("Histórico do dia limpo.");
+            snap.forEach(d => { d.forEach(e => { if(e.val().date === date) remove(ref(db, `historico/${d.key}/${e.key}`)); }); });
+            alert("Limpo!");
         };
     </script>
 </body>
